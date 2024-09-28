@@ -1,8 +1,8 @@
 import os
 import sys
 import discord
-import requests
 import logging
+import aiohttp
 from datetime import datetime
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -32,16 +32,25 @@ bot = commands.Bot(
 )
 
 
-async def get_status():
-    res = requests.get(CAT21_API_URL + "/api/status")
-    res.raise_for_status()
-    return res.json()
+async def get_status() -> dict:
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{CAT21_API_URL}/api/status") as res:
+            res.raise_for_status()
+            return await res.json()
 
 
 async def get_cat_details(cat_number: int) -> dict:
-    res = requests.get(CAT21_API_URL + f"/api/cat/by-num/{cat_number}")
-    res.raise_for_status()
-    return res.json()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{CAT21_API_URL}/api/cat/by-num/{cat_number}") as res:
+            res.raise_for_status()
+            return await res.json()
+
+
+async def get_cats_by_minter(address: str) -> list:
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{CAT21_API_URL}/api/cats/by-address/{address}") as res:
+            res.raise_for_status()
+            return await res.json()
 
 
 def get_cat_age(minted_at: str) -> str:
