@@ -65,7 +65,7 @@ async def on_ready():
 
 @bot.command()
 async def cat(ctx, identifier: str):
-    logging.info(f"Received !cat {identifier} from {ctx.author.name} with ID {ctx.author.id}")
+    logging.info(f"!cat {identifier} from '{ctx.author.name}' ID {ctx.author.id}")
 
     if not identifier.isdigit() or int(identifier) < 0:
         await ctx.send(f"My cats are identified by numbers, please try again.")
@@ -128,6 +128,38 @@ async def cat(ctx, identifier: str):
     )
     await ctx.send(embed=embed)
     return
+
+@bot.command()
+async def minter(ctx, address: str):
+    logging.info(f"!minter {address} from '{ctx.author.name}' ID {ctx.author.id}")
+
+    try:
+        minted_cats = await get_cats_by_minter(address)
+    except aiohttp.client_exceptions.ClientResponseError as e:
+        await ctx.send(f"No cats minted by address `{address}`, how is this possible? Time to mint some. Zoom zoom!")
+        return
+    except Exception as e:
+        await ctx.send(
+            f"Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
+        )
+        logging.exception(f"Error fetching minted cats for address {address}")
+        return
+
+    embed = discord.Embed(
+        title=f"Minted cats",
+        description="Here's what I found!",
+    )
+
+    for cat in minted_cats:
+        # Add each cat as a field with a link to the transaction
+        embed.add_field(
+            name=f"Cat #{cat["catNumber"]}",
+            value=f"[View Transaction](https://ordpool.space/tx/{cat["txHash"]})",
+            inline=True
+        )
+
+    # Send the embed to Discord
+    await ctx.send(embed=embed)
 
 
 if __name__ == "__main__":
