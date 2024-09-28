@@ -17,6 +17,7 @@ logging.basicConfig(
 load_dotenv()
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 CAT21_API_URL = os.getenv("CAT21_API_URL")
+CAT21_IMAGE_BASE_URL = os.getenv("CAT21_IMAGE_BASE_URL")
 
 
 # Initialize the bot with command prefix '!'
@@ -88,29 +89,33 @@ async def cat(ctx, identifier: str):
         return
 
     cat_age = get_cat_age(cat_details["mintedAt"])
+    cat_bucket_idx = cat_number // 1000
+    image_url = f"{CAT21_IMAGE_BASE_URL}/pngs/{cat_bucket_idx}/cat_{cat_number}.png"
+    logging.info(f"Image URL: {image_url}")
 
     embed = discord.Embed(
         title=f"Cat #{cat_number}"
     )
+    embed.set_image(url=image_url)
     embed.add_field(
         name="Age",
         value=cat_age,
-        inline=False,
+        inline=True,
     )
     embed.add_field(
         name="Feerate",
         value=f"{cat_details['feeRate']} sat/vB",
-        inline=False
+        inline=True,
     )
     embed.add_field(
         name="Minter",
         value=cat_details["mintedBy"],
-        inline=False
+        inline=False,
     )
     embed.add_field(
         name="Transaction",
         value=f"https://ordpool.space/tx/{cat_details['txHash']}",
-        inline=False
+        inline=False,
     )
     await ctx.send(embed=embed)
     return
