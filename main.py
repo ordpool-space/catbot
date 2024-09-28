@@ -56,7 +56,7 @@ async def on_ready():
 
 @bot.command()
 async def cat(ctx, identifier: str):
-    logging.info(f"Received !cat command with identifier {identifier}")
+    logging.info(f"Received !cat {identifier} from {ctx.author.name} with ID {ctx.author.id}")
 
     if not identifier.isdigit() or int(identifier) < 0:
         await ctx.send(f"My cats are identified by numbers, please try again.")
@@ -68,7 +68,7 @@ async def cat(ctx, identifier: str):
         status = await get_status()
     except Exception as e:
         await ctx.send(
-            f"Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone elses back-end in the meantime."
+            f"Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
         )
         logging.exception(f"Unable to call get_status")
         return
@@ -83,7 +83,7 @@ async def cat(ctx, identifier: str):
         cat_details = await get_cat_details(cat_number)
     except Exception as e:
         await ctx.send(
-            f"Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone elses back-end in the meantime."
+            f"Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
         )
         logging.exception(f"Unable to call get_cat_details")
         return
@@ -94,7 +94,7 @@ async def cat(ctx, identifier: str):
     logging.info(f"Image URL: {image_url}")
 
     embed = discord.Embed(
-        title=f"Cat #{cat_number}"
+        title=f"Cat #{cat_number}",
     )
     embed.set_image(url=image_url)
     embed.add_field(
