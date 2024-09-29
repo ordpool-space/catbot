@@ -23,6 +23,8 @@ CAT21_IMAGE_BASE_URL = os.getenv("CAT21_IMAGE_BASE_URL")
 if DISCORD_BOT_TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN environment variable not set")
 
+BACKEND_UNREACHABLE_MSG = "Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
+
 # Initialize the bot with command prefix '!'
 intents = discord.Intents.default()
 intents.message_content = True
@@ -84,10 +86,8 @@ async def cat(ctx, identifier: str = ""):
 
     try:
         status = await get_status()
-    except:
-        await ctx.send(
-            "Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
-        )
+    except Exception:
+        await ctx.send(BACKEND_UNREACHABLE_MSG)
         logging.exception("Unable to call get_status")
         return
 
@@ -104,10 +104,8 @@ async def cat(ctx, identifier: str = ""):
 
     try:
         cat_details = await get_cat_details(cat_number)
-    except:
-        await ctx.send(
-            "Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
-        )
+    except Exception:
+        await ctx.send(BACKEND_UNREACHABLE_MSG)
         logging.exception("Unable to call get_cat_details")
         return
 
@@ -130,7 +128,6 @@ async def cat(ctx, identifier: str = ""):
         inline=True,
     )
     await ctx.send(embed=embed)
-    return
 
 
 @bot.command()
@@ -143,14 +140,12 @@ async def minter(ctx, address: str):
         await ctx.send(f"No cats minted by address `{address}`, how is this possible? Time to mint some. Zoom zoom!")
         return
     except Exception:
-        await ctx.send(
-            "Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
-        )
+        await ctx.send(BACKEND_UNREACHABLE_MSG)
         logging.exception(f"Error fetching minted cats for address `{address}`")
         return
 
     embed = discord.Embed(
-        title=f"Minted cats",
+        title="Minted cats",
         description="Here's what I found!",
     )
 
