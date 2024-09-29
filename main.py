@@ -82,11 +82,11 @@ async def cat(ctx, identifier: str = ""):
 
     try:
         status = await get_status()
-    except Exception as e:
+    except:
         await ctx.send(
-            f"Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
+            "Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
         )
-        logging.exception(f"Unable to call get_status")
+        logging.exception("Unable to call get_status")
         return
 
     if identifier.isdigit() and int(identifier) > 0:
@@ -102,11 +102,11 @@ async def cat(ctx, identifier: str = ""):
 
     try:
         cat_details = await get_cat_details(cat_number)
-    except Exception as e:
+    except:
         await ctx.send(
-            f"Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
+            "Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
         )
-        logging.exception(f"Unable to call get_cat_details")
+        logging.exception("Unable to call get_cat_details")
         return
 
     cat_age = get_cat_age(cat_details["mintedAt"])
@@ -137,14 +137,14 @@ async def minter(ctx, address: str):
 
     try:
         minted_cats = await get_cats_by_minter(address)
-    except aiohttp.client_exceptions.ClientResponseError as e:
+    except aiohttp.client_exceptions.ClientResponseError:
         await ctx.send(f"No cats minted by address `{address}`, how is this possible? Time to mint some. Zoom zoom!")
         return
-    except Exception as e:
+    except Exception:
         await ctx.send(
-            f"Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
+            "Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
         )
-        logging.exception(f"Error fetching minted cats for address {address}")
+        logging.exception(f"Error fetching minted cats for address `{address}`")
         return
 
     embed = discord.Embed(
