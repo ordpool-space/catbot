@@ -8,6 +8,7 @@ requests = "*"
 "discord.py" = "*"
 python-dotenv = "*"
 aiohttp = "*"
+prometheus-client = "*"
 
 [dev-packages]
 ipykernel = "*"
