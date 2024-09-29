@@ -56,7 +56,19 @@ async def get_cats_by_minter(address: str) -> list:
 
 def get_cat_age(minted_at: str) -> str:
     tdelta = datetime.now() - datetime.strptime(minted_at, "%Y-%m-%dT%H:%M:%S+00:00")
-    return f"{tdelta.days} days (born {minted_at})"
+    minted_at_date = minted_at.split('T', 1)[0]
+
+    age_str = ""
+    if tdelta.days == 0:
+        age_str = "just minted today!"
+    elif tdelta.days < 30:
+        age_str = f"{tdelta.days} days old!"
+    elif tdelta.days < 365:
+        age_str = f"{tdelta.days // 30} months old!"
+    else:
+        age_str = f"{tdelta.days // 365} years {tdelta.days // 30} months old!"
+
+    return f"{age_str} (born {minted_at_date})"
 
 
 @bot.event
