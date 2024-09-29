@@ -20,6 +20,8 @@ DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 CAT21_API_URL = os.getenv("CAT21_API_URL")
 CAT21_IMAGE_BASE_URL = os.getenv("CAT21_IMAGE_BASE_URL")
 
+if DISCORD_BOT_TOKEN is None:
+    raise ValueError("DISCORD_BOT_TOKEN environment variable not set")
 
 # Initialize the bot with command prefix '!'
 intents = discord.Intents.default()
