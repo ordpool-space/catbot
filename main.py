@@ -94,8 +94,6 @@ async def on_command_error(ctx, error):
 `!minter <address>` means you minted a lot and wanna try to get all the cats in one spot. Not easy I know!
 """
         await ctx.send(help_text)
-    else:
-        pass
 
 
 # !cat to display all we know about a single cat
