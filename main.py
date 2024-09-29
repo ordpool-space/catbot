@@ -112,7 +112,6 @@ async def cat(ctx, identifier: str = ""):
     cat_age = get_cat_age(cat_details["mintedAt"])
     cat_bucket_idx = cat_number // 1000
     image_url = f"{CAT21_IMAGE_BASE_URL}/pngs/{cat_bucket_idx}/cat_{cat_number}.png"
-    logging.info(f"Image URL: {image_url}")
 
     embed = discord.Embed(
         title=f"Cat #{cat_number}",
@@ -125,21 +124,12 @@ async def cat(ctx, identifier: str = ""):
     )
     embed.add_field(
         name="Feerate",
-        value=f"{cat_details['feeRate']} sat/vB",
+        value=f"{cat_details['feeRate']:.1f} sat/vB [View Transaction](https://ordpool.space/tx/{cat_details["txHash"]})",
         inline=True,
-    )
-    embed.add_field(
-        name="Minter",
-        value=cat_details["mintedBy"],
-        inline=False,
-    )
-    embed.add_field(
-        name="Transaction",
-        value=f"https://ordpool.space/tx/{cat_details['txHash']}",
-        inline=False,
     )
     await ctx.send(embed=embed)
     return
+
 
 @bot.command()
 async def minter(ctx, address: str):
