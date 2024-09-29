@@ -25,6 +25,9 @@ if DISCORD_BOT_TOKEN is None:
 
 BACKEND_UNREACHABLE_MSG = "Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
 
+# Remove "Arguments:" from help command output
+help_cmd = commands.DefaultHelpCommand(show_parameter_descriptions=False)
+
 # Initialize the bot with command prefix '!'
 intents = discord.Intents.default()
 intents.message_content = True
@@ -34,6 +37,7 @@ bot = commands.Bot(
     description="CAT-21 Discord Bot",
     case_insensitive=True,
     strip_after_prefix=True,
+    help_command=help_cmd
 )
 
 
@@ -80,9 +84,31 @@ async def on_ready():
     print(f"Logged in as {bot.user}")
 
 
-@bot.command()
-async def cat(ctx, identifier: str = ""):
-    logging.info(f"!cat {identifier} from '{ctx.author.name}' ID {ctx.author.id}")
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        help_text="""I'm a bot and a cat and a catbot. Here's what I know:
+
+`!cat 27` means I show you how cat 27 looks. Awesome right?
+`!cat` means you just want more cats in your life. Meow!
+`!minter <address>` means you minted a lot and wanna try to get all the cats in one spot. Not easy I know!
+"""
+        await ctx.send(help_text)
+    else:
+        pass
+
+
+# !cat to display all we know about a single cat
+@bot.command(
+    name="cat",
+    brief="See all about this awesome cat!",
+    help="""See a specific cat by number, like !cat 27
+Or a random cat with !cat when you're feeling lucky! Meow!""",
+)
+async def acat(ctx, number: str = ""):
+    requester_info = f"'{ctx.author.name}' ({ctx.author.id})"
+    guild_info = f"'{ctx.guild.name}' ({ctx.guild.id})" if ctx.guild else "DM"
+    logging.info(f"!cat {number} from {requester_info} in {guild_info}")
 
     try:
         status = await get_status()
@@ -91,8 +117,8 @@ async def cat(ctx, identifier: str = ""):
         logging.exception("Unable to call get_status")
         return
 
-    if identifier.isdigit() and int(identifier) >= 0:
-        cat_number = int(identifier)
+    if number.isdigit() and int(number) >= 0:
+        cat_number = int(number)
     else:
         cat_number = random.randint(0, status["indexedCats"] - 1)
 
@@ -130,9 +156,16 @@ async def cat(ctx, identifier: str = ""):
     await ctx.send(embed=embed)
 
 
-@bot.command()
+# !minter to list all cats minted by one address
+@bot.command(
+    name="minter",
+    brief="All the cats minted by one address",
+    usage="""[address]  I'll dig deep and find all the cats minted by this taproot address. Phew!"""
+)
 async def minter(ctx, address: str):
-    logging.info(f"!minter {address} from '{ctx.author.name}' ID {ctx.author.id}")
+    requester_info = f"'{ctx.author.name}' ({ctx.author.id})"
+    guild_info = f"'{ctx.guild.name}' ({ctx.guild.id})" if ctx.guild else "DM"
+    logging.info(f"!minter {address} from {requester_info} in {guild_info}")
 
     try:
         minted_cats = await get_cats_by_minter(address)
