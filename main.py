@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 import discord
 import logging
@@ -64,14 +65,8 @@ async def on_ready():
 
 
 @bot.command()
-async def cat(ctx, identifier: str):
+async def cat(ctx, identifier: str = ""):
     logging.info(f"!cat {identifier} from '{ctx.author.name}' ID {ctx.author.id}")
-
-    if not identifier.isdigit() or int(identifier) < 0:
-        await ctx.send(f"My cats are identified by numbers, please try again.")
-        return
-
-    cat_number = int(identifier)
 
     try:
         status = await get_status()
@@ -81,6 +76,11 @@ async def cat(ctx, identifier: str):
         )
         logging.exception(f"Unable to call get_status")
         return
+
+    if identifier.isdigit() and int(identifier) > 0:
+        cat_number = int(identifier)
+    else:
+        cat_number = random.randint(0, status["indexedCats"] - 1)
 
     if cat_number > status["indexedCats"]:
         await ctx.send(
