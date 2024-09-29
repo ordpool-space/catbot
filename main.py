@@ -158,7 +158,7 @@ async def minter(ctx, address: str):
         # Add each cat as a field with a link to the transaction
         embed.add_field(
             name=f"Cat #{cat["catNumber"]}",
-            value=f"[View Transaction](https://ordpool.space/tx/{cat["txHash"]})",
+            value=f"{cat['feeRate']:.1f} sat/vB [View Transaction](https://ordpool.space/tx/{cat["txHash"]})",
             inline=True
         )
 
