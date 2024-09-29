@@ -91,7 +91,7 @@ async def cat(ctx, identifier: str = ""):
         logging.exception("Unable to call get_status")
         return
 
-    if identifier.isdigit() and int(identifier) > 0:
+    if identifier.isdigit() and int(identifier) >= 0:
         cat_number = int(identifier)
     else:
         cat_number = random.randint(0, status["indexedCats"] - 1)
