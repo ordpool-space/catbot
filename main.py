@@ -105,7 +105,7 @@ async def on_command_error(ctx, error):
     help="""See a specific cat by number, like !cat 27
 Or a random cat with !cat when you're feeling lucky! Meow!""",
 )
-async def acat(ctx, number: str = ""):
+async def cat(ctx, number: str = ""):
     requester_info = f"'{ctx.author.name}' ({ctx.author.id})"
     guild_info = f"'{ctx.guild.name}' ({ctx.guild.id})" if ctx.guild else "DM"
     logging.info(f"!cat {number} from {requester_info} in {guild_info}")
