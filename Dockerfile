@@ -10,6 +10,9 @@ COPY Pipfile* ./
 # Install pipenv and dependencies from Pipfile
 RUN pip install pipenv && pipenv install --deploy --ignore-pipfile
 
+# Make log directory
+RUN mkdir -p /app/logs
+
 # Copy application code to the container
 COPY main.py .
 
