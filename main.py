@@ -166,12 +166,7 @@ async def on_ready():
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
-        help_text = """I'm a bot and a cat and a catbot. Here's what I know:
-
-`!cat 27` means I show you how cat 27 looks. Awesome right?
-`!cat` means you just want more cats in your life. Meow!
-`!minter <address>` means you minted a lot and wanna try to get all the cats in one spot. Not easy I know!
-"""
+        help_text = "Uh-oh! Discord says you have to use !c in front of your question to get my attention. Zoom zoom!"
         await ctx.send(help_text)
 
 
@@ -245,7 +240,7 @@ async def get_details_about_a_random_cat() -> dict:
 
 
 @agent.tool_plain
-async def get_all_cats_minted_to_one_specific_address(minted_to_address: str) -> list:
+async def get_all_cats_minted_to_one_specific_address(minted_to_address: str) -> str:
     try:
         minted_cats = await get_cats_by_minter(minted_to_address)
     except aiohttp.client_exceptions.ClientResponseError:
@@ -254,7 +249,11 @@ async def get_all_cats_minted_to_one_specific_address(minted_to_address: str) ->
         logger.exception(f"Error fetching minted cats for address `{minted_to_address}`")
         return BACKEND_UNREACHABLE_MSG
 
-    return minted_cats
+    # Reduce list to only cat number and image URL
+    res = ""
+    for cat in minted_cats:
+        res += f"Cat {cat['catNumber']}: {get_image_url(cat['catNumber'])}\n"
+    return res
 
 
 if __name__ == "__main__":
