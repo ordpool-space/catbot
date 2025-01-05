@@ -152,7 +152,7 @@ def get_cat_age(minted_at: str) -> str:
     return f"{age_str} (born {minted_at_date})"
 
 
-async def get_image_url(cat_number: int) -> str:
+def get_image_url(cat_number: int) -> str:
     """Return the image URL for a specific cat number, to display what it looks like."""
     cat_bucket_idx = cat_number // 1000
     return f"{CAT21_IMAGE_BASE_URL}/pngs/{cat_bucket_idx}/cat_{cat_number}.png"
@@ -212,8 +212,7 @@ async def get_all_details_about_a_specific_cat(cat_number: int) -> dict:
         return BACKEND_UNREACHABLE_MSG
 
     cat_age = get_cat_age(cat_details["mintedAt"])
-    cat_bucket_idx = cat_number // 1000
-    image_url = f"{CAT21_IMAGE_BASE_URL}/pngs/{cat_bucket_idx}/cat_{cat_number}.png"
+    image_url = get_image_url(cat_number)
 
     return {
         "cat_number": cat_number,
