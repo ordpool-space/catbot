@@ -7,13 +7,10 @@ WORKDIR /app
 # Copy the Pipfile and Pipfile.lock to the container
 COPY Pipfile* ./
 
-# Install pipenv
-RUN pip install pipenv
+# Install pipenv and dependencies from Pipfile
+RUN pip install pipenv && pipenv install --deploy --ignore-pipfile
 
-# Install the dependencies from the Pipfile
-RUN pipenv install --deploy --ignore-pipfile
-
-# Copy the rest of your application code to the container
+# Copy application code to the container
 COPY main.py .
 
 # Command to run your bot
