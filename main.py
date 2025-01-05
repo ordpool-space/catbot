@@ -22,7 +22,7 @@ discord_logger.setLevel(logging.INFO)
 # Create handlers
 console_handler = logging.StreamHandler(sys.stdout)
 file_handler = TimedRotatingFileHandler(
-    "logs/catbot.log", when="midnight", interval=1
+    "/data/logs/catbot.log", when="midnight", interval=1
 )
 file_handler.suffix = "%Y-%m-%d"
 
@@ -46,7 +46,6 @@ CAT21_IMAGE_BASE_URL = os.getenv("CAT21_IMAGE_BASE_URL")
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-LOG_FILE_PATH = "discord_bot.log"
 
 if CAT21_API_URL is None:
     raise ValueError("CAT21_API_URL environment variable not set")
