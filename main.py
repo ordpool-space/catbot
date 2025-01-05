@@ -22,7 +22,7 @@ discord_logger.setLevel(logging.INFO)
 # Create handlers
 console_handler = logging.StreamHandler(sys.stdout)
 file_handler = TimedRotatingFileHandler(
-    "/data/logs/catbot.log", when="midnight", interval=1
+    "logs/catbot.log", when="midnight", interval=1
 )
 file_handler.suffix = "%Y-%m-%d"
 
