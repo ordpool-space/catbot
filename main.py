@@ -14,13 +14,15 @@ from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.models.gemini import GeminiModel
 
 # Create a logger
-logger = logging.getLogger() #logging.getLogger('discord')
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+discord_logger = logging.getLogger('discord')
+discord_logger.setLevel(logging.INFO)
 
 # Create handlers
 console_handler = logging.StreamHandler(sys.stdout)
 file_handler = TimedRotatingFileHandler(
-    "logs/discord_bot.log", when="midnight", interval=1
+    "/data/logs/catbot.log", when="midnight", interval=1
 )
 file_handler.suffix = "%Y-%m-%d"
 
@@ -34,6 +36,8 @@ file_handler.setFormatter(formatter)
 # Add the handlers to the logger
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
+discord_logger.addHandler(console_handler)
+discord_logger.addHandler(file_handler)
 
 # Load environment variables
 load_dotenv()
