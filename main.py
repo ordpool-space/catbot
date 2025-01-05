@@ -61,20 +61,24 @@ async def get_cats_by_minter(address: str) -> list:
             res.raise_for_status()
             return await res.json()
 
-
 def get_cat_age(minted_at: str) -> str:
     tdelta = datetime.now() - datetime.strptime(minted_at, "%Y-%m-%dT%H:%M:%S+00:00")
     minted_at_date = minted_at.split('T', 1)[0]
 
+    years = tdelta.days // 365
+    remaining_days = tdelta.days % 365
+    months = remaining_days // 30
+    days = remaining_days % 30
+
     age_str = ""
-    if tdelta.days == 0:
+    if tdelta.days < 1:
         age_str = "just minted today!"
     elif tdelta.days < 30:
         age_str = f"{tdelta.days} days old!"
     elif tdelta.days < 365:
-        age_str = f"{tdelta.days // 30} months old!"
+        age_str = f"{months} months and {days} days old!"
     else:
-        age_str = f"{tdelta.days // 365} years {tdelta.days // 30} months old!"
+        age_str = f"{years} years, {months} months and {days} days old!"
 
     return f"{age_str} (born {minted_at_date})"
 
