@@ -257,7 +257,7 @@ async def get_all_cats_minted_to_one_specific_address(minted_to_address: str) ->
 
 @agent.tool_plain
 def get_today_date() -> str:
-    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
     return f"Today's date is {today}."
 
 
@@ -268,7 +268,7 @@ async def total_cat_mint_count() -> str:
     except Exception:
         logger.exception("Unable to call get_status")
         return BACKEND_UNREACHABLE_MSG
-    return f"A total of {status['indexedCats']} cats have been minted according to the Catbot database. It is up to date up until {status['lastSuccessfulExecution']}. {get_today_date()}"
+    return f"A total of {status['indexedCats']} cats have been minted according to the Catbot database. It is up to date up until {status['lastSuccessfulExecution']}. Today is {datetime.now().strftime('%Y-%m-%d')}."
 
 
 if __name__ == "__main__":
