@@ -4,7 +4,7 @@ import sys
 import discord
 import logging
 import aiohttp
-import aiofiles
+import psycopg2
 from datetime import datetime
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -46,6 +46,10 @@ CAT21_IMAGE_BASE_URL = os.getenv("CAT21_IMAGE_BASE_URL")
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+DATABASE_HOST = os.getenv("DATABASE_HOST")
+DATABASE_USER = os.getenv("DATABASE_USER")
+DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+DATABASE_NAME = os.getenv("DATABASE_NAME")
 
 if CAT21_API_URL is None:
     raise ValueError("CAT21_API_URL environment variable not set")
@@ -105,6 +109,22 @@ async def globally_block_dms(ctx):
     return ctx.guild is not None
 
 
+def get_database_connection():
+    """Create a connection to the PostgreSQL database."""
+    try:
+        conn = psycopg2.connect(
+            host=DATABASE_HOST,
+            user=DATABASE_USER,
+            password=DATABASE_PASSWORD,
+            dbname=DATABASE_NAME
+        )
+        logger.info("Successfully connected to the database.")
+        return conn
+    except psycopg2.DatabaseError as e:
+        logger.exception("Failed to connect to the database.")
+        raise e
+
+
 async def get_status() -> dict:
     """Check status for CAT21 backend API."""
     async with aiohttp.ClientSession() as session:
@@ -129,8 +149,13 @@ async def get_cats_by_minter(address: str) -> list:
             return await res.json()
 
 
+@agent.tool_plain
 def get_cat_age(minted_at: str) -> str:
-    """Transform a minted_at timestamp into a human-readable age string, like '1 year, 2 months and 3 days old'."""
+    """Transform a minted_at timestamp into a human-readable age string, like '1 year, 2 months and 3 days old'.
+    
+    Args:
+        minted_at (str): A datetime string in ISO format.
+    """
     tdelta = datetime.now() - datetime.strptime(minted_at, "%Y-%m-%dT%H:%M:%S+00:00")
     minted_at_date = minted_at.split("T", 1)[0]
 
@@ -152,8 +177,13 @@ def get_cat_age(minted_at: str) -> str:
     return f"{age_str} (born {minted_at_date})"
 
 
+@agent.tool_plain
 def get_image_url(cat_number: int) -> str:
-    """Return the image URL for a specific cat number, to display what it looks like."""
+    """Return the image URL for a specific cat number, to display what it looks like.
+    
+    Args:
+        cat_number (int): The unique identifier of the cat.
+    """
     cat_bucket_idx = cat_number // 1000
     return f"{CAT21_IMAGE_BASE_URL}/pngs/{cat_bucket_idx}/cat_{cat_number}.png"
 
@@ -194,6 +224,48 @@ async def c(ctx, *args):
 
 
 @agent.tool_plain
+def query_database(query: str) -> list:
+    """Execute a SQL query against the "cats" table in the CAT-21 database to figure out anything about CAT-21 mints. Schema for the cats table:
+                                    Table "public.cats"
+     Column      |           Type           | Collation | Nullable |        Default        
+-----------------+--------------------------+-----------+----------+-----------------------
+ id              | uuid                     |           | not null | gen_random_uuid()
+ cat_number      | integer                  |           |          | 
+ lock_time       | integer                  |           |          | 
+ block_height    | integer                  |           |          | 
+ minted_at       | timestamp with time zone |           |          | 
+ minted_by       | character varying(256)   |           |          | 
+ feerate         | double precision         |           |          | 
+ tx_hash         | character varying(256)   |           |          | 
+ tx_fee          | double precision         |           |          | 
+ tx_virtual_size | integer                  |           |          | 
+ tx_input_count  | integer                  |           |          | 
+ tx_input        | jsonb                    |           |          | 
+ tx_output_count | integer                  |           |          | 
+ tx_output       | jsonb                    |           |          | 
+ block_hash      | character varying(256)   |           |          | ''::character varying
+ category        | character varying(50)    |           |          | ''::character varying
+Indexes:
+    "cats_pkey" PRIMARY KEY, btree (id)
+    
+    Args:
+        query (str): The SQL query to execute. Only SELECT queries are supported.
+    """
+    conn = get_database_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            column_names = [desc[0] for desc in cursor.description]
+            results = [dict(zip(column_names, row)) for row in cursor.fetchall()]
+        conn.commit()
+        return results
+    except Exception as e:
+        logger.exception("Failed to run query: %s", query)
+        raise e
+    finally:
+        conn.close()
+
+
 async def get_all_details_about_a_specific_cat(cat_number: int) -> dict:
     """Fetch everything we know about one specific cat. Make sure to show off the cat image by including the image URL in your response whenever you get the chance."""
     try:
@@ -219,13 +291,12 @@ async def get_all_details_about_a_specific_cat(cat_number: int) -> dict:
         "cat_age": cat_age,
         "minted_to_address": cat_details["mintedBy"],
         "minted_in_bitcoin_block": cat_details["blockHeight"],
-        "network_congestion_level_at_mint_time": f"{cat_details['feeRate']:.1f} sat/vB",
+        "fee_rate_paid_to_mint": f"{cat_details['feeRate']:.1f} sat/vB",
         "transaction_url": f"https://ordpool.space/tx/{cat_details["txHash"]}",
         "image_url": image_url,
     }
 
 
-@agent.tool_plain
 async def get_details_about_a_random_cat() -> dict:
     """Fetch details about a random cat, including its image URL that you can show off by including the URL in your reply. Use this when the human is not sure which cat they want to see, but you want to show them one."""
     try:
@@ -238,7 +309,6 @@ async def get_details_about_a_random_cat() -> dict:
     return await get_all_details_about_a_specific_cat(cat_number)
 
 
-@agent.tool_plain
 async def get_all_cats_minted_to_one_specific_address(minted_to_address: str) -> str:
     try:
         minted_cats = await get_cats_by_minter(minted_to_address)
