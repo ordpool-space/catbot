@@ -265,7 +265,7 @@ Indexes:
         return results
     except Exception as e:
         logger.exception("Failed to run query: %s", query)
-        raise e
+        return f"Query failed due to {e}"
     finally:
         conn.close()
 
