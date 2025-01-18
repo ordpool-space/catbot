@@ -1,5 +1,4 @@
 import os
-import random
 import sys
 import discord
 import logging
@@ -10,7 +9,6 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from logging.handlers import TimedRotatingFileHandler
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.models.gemini import GeminiModel
 
 # Create a logger
@@ -44,7 +42,6 @@ load_dotenv()
 CAT21_API_URL = os.getenv("CAT21_API_URL")
 CAT21_IMAGE_BASE_URL = os.getenv("CAT21_IMAGE_BASE_URL")
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 DATABASE_HOST = os.getenv("DATABASE_HOST")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
@@ -57,8 +54,6 @@ if CAT21_IMAGE_BASE_URL is None:
     raise ValueError("CAT21_IMAGE_BASE_URL environment variable not set")
 if DISCORD_BOT_TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN environment variable not set")
-if OPENROUTER_API_KEY is None:
-    raise ValueError("OPENROUTER_API_KEY environment variable not set")
 if GEMINI_API_KEY is None:
     raise ValueError("GEMINI_API_KEY environment variable not set")
 
@@ -93,11 +88,6 @@ When a user asks for all cats minted by one address, they want to know at least 
 Use the "get_image_url" to get image URLs for each cat number you find, do not wait for the user to ask for images. They always want images. Always post image URLs as regular URLs without any Markdown formatting.
 """
 
-openai_model = OpenAIModel(
-    "openai/gpt-4o-mini",
-    base_url="https://openrouter.ai/api/v1",
-    api_key=OPENROUTER_API_KEY,
-)
 gemini_model = GeminiModel(
     "gemini-1.5-flash",
 )
@@ -135,22 +125,6 @@ async def get_status() -> dict:
     """Check status for CAT21 backend API."""
     async with aiohttp.ClientSession() as session:
         async with session.get(f"{CAT21_API_URL}/api/status") as res:
-            res.raise_for_status()
-            return await res.json()
-
-
-async def get_cat_details(cat_number: int) -> dict:
-    """Fetch all details about one specific cat, in JSON format."""
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"{CAT21_API_URL}/api/cat/by-num/{cat_number}") as res:
-            res.raise_for_status()
-            return await res.json()
-
-
-async def get_cats_by_minter(address: str) -> list:
-    """Get a list of all cats minted by a specific taproot address, in JSON format."""
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"{CAT21_API_URL}/api/cats/by-address/{address}") as res:
             res.raise_for_status()
             return await res.json()
 
@@ -276,79 +250,10 @@ Table "public.cats"
         conn.close()
 
 
-async def get_all_details_about_a_specific_cat(cat_number: int) -> dict:
-    """Fetch everything we know about one specific cat. Make sure to show off the cat image by including the image URL in your response whenever you get the chance."""
-    try:
-        status = await get_status()
-    except Exception:
-        logger.exception("Unable to call get_status")
-        return BACKEND_UNREACHABLE_MSG
-
-    if cat_number >= status["indexedCats"]:
-        return f"Cat {cat_number} is unknown to me."
-
-    try:
-        cat_details = await get_cat_details(cat_number)
-    except Exception:
-        logger.exception("Unable to call get_cat_details")
-        return BACKEND_UNREACHABLE_MSG
-
-    cat_age = get_cat_age(cat_details["mintedAt"])
-    image_url = get_image_url(cat_number)
-
-    return {
-        "cat_number": cat_number,
-        "cat_age": cat_age,
-        "minted_to_address": cat_details["mintedBy"],
-        "minted_in_bitcoin_block": cat_details["blockHeight"],
-        "fee_rate_paid_to_mint": f"{cat_details['feeRate']:.1f} sat/vB",
-        "transaction_url": f"https://ordpool.space/tx/{cat_details["txHash"]}",
-        "image_url": image_url,
-    }
-
-
-async def get_details_about_a_random_cat() -> dict:
-    """Fetch details about a random cat, including its image URL that you can show off by including the URL in your reply. Use this when the human is not sure which cat they want to see, but you want to show them one."""
-    try:
-        status = await get_status()
-    except Exception:
-        logger.exception("Unable to call get_status")
-        return BACKEND_UNREACHABLE_MSG
-
-    cat_number = random.randint(0, status["indexedCats"] - 1)
-    return await get_all_details_about_a_specific_cat(cat_number)
-
-
-async def get_all_cats_minted_to_one_specific_address(minted_to_address: str) -> str:
-    try:
-        minted_cats = await get_cats_by_minter(minted_to_address)
-    except aiohttp.client_exceptions.ClientResponseError:
-        return f"No cats minted by this address, how is this possible? Time to mint some. Zoom zoom!"
-    except Exception:
-        logger.exception(f"Error fetching minted cats for address `{minted_to_address}`")
-        return BACKEND_UNREACHABLE_MSG
-
-    # Reduce list to only cat number and image URL
-    res = ""
-    for cat in minted_cats:
-        res += f"Cat {cat['catNumber']}: {get_image_url(cat['catNumber'])}\n"
-    return res
-
-
 @agent.tool_plain
 def get_today_date() -> str:
     today = datetime.now().strftime("%Y-%m-%d")
     return f"Today's date is {today}."
-
-
-@agent.tool_plain
-async def total_cat_mint_count() -> str:
-    try:
-        status = await get_status()
-    except Exception:
-        logger.exception("Unable to call get_status")
-        return BACKEND_UNREACHABLE_MSG
-    return f"A total of {status['indexedCats']} cats have been minted according to the Catbot database. It is up to date up until {status['lastSuccessfulExecution']}. Today is {datetime.now().strftime('%Y-%m-%d')}."
 
 
 if __name__ == "__main__":
