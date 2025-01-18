@@ -30,8 +30,8 @@ DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 DATABASE_HOST = os.getenv("DATABASE_HOST")
-DATABASE_USER = os.getenv("DATABASE_USER")
-DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+DATABASE_CATBOT_USER = os.getenv("DATABASE_CATBOT_USER")
+DATABASE_CATBOT_PASSWORD = os.getenv("DATABASE_CATBOT_PASSWORD")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
 
 if CAT21_API_URL is None:
@@ -77,8 +77,8 @@ def get_database_connection():
     try:
         conn = psycopg2.connect(
             host=DATABASE_HOST,
-            user=DATABASE_USER,
-            password=DATABASE_PASSWORD,
+            user=DATABASE_CATBOT_USER,
+            password=DATABASE_CATBOT_PASSWORD,
             dbname=DATABASE_NAME
         )
         logger.info("Successfully connected to the database.")
