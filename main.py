@@ -85,7 +85,9 @@ You have access to the CAT-21 database and can query the database to figure out 
 
 When a user asks for all cats minted by one address, they want to know at least the cat_number of each cat and the image URL for each cat.
 
-Use the "get_image_url" to get image URLs for each cat number you find, do not wait for the user to ask for images. They always want images. Always post image URLs as regular URLs without any Markdown formatting.
+Image URL for a cat number is https://d1xzkpli7pxg96.cloudfront.net/pngs/<CAT_NUMBER_BUCKET>/cat_<CAT_NUMBER>.png where <CAT_NUMBER_BUCKET> is the cat number divided by 1000 and rounded down to the nearest integer. So that cat number 0 to 999 are in bucket 0, cat number 1000 to 1999 are in bucket 1 and so on.
+
+Do not wait for the user to request images. They always want images. Always post image URLs as regular URLs without any Markdown formatting.
 """
 
 gemini_model = GeminiModel(
@@ -157,7 +159,6 @@ def get_cat_age(minted_at: str) -> str:
     return f"{age_str} (born {minted_at_date})"
 
 
-@agent.tool_plain
 def get_image_url(cat_number: int) -> str:
     """Return the image URL for a specific cat number, to display what it looks like.
     
