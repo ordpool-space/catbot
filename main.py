@@ -88,7 +88,9 @@ The colors of each cat minted depends on how much the minter was willing to pay 
 
 You have access to the CAT-21 database and can query the database to figure out anything about minted cats, blocks, minter addresses and transactions. Use the "query_database" tool.
 
-When a user asks for all cats minted by one address, they want to know at least the cat_number of each cat and preferably also the image URL for each cat. Use the "get_image_url" to get image URLs for each cat, do not wait for the user to ask for images.
+When a user asks for all cats minted by one address, they want to know at least the cat_number of each cat and the image URL for each cat.
+
+Use the "get_image_url" to get image URLs for each cat number you find, do not wait for the user to ask for images. They always want images. Always post image URLs as regular URLs without any Markdown formatting.
 """
 
 openai_model = OpenAIModel(
@@ -230,28 +232,32 @@ async def c(ctx, *args):
 @agent.tool_plain
 def query_database(query: str) -> list:
     """Execute a SQL query against the "cats" table in the CAT-21 database to figure out anything about CAT-21 mints. Schema for the cats table:
-                                    Table "public.cats"
-     Column      |           Type           | Collation | Nullable |        Default        
------------------+--------------------------+-----------+----------+-----------------------
- id              | uuid                     |           | not null | gen_random_uuid()
- cat_number      | integer                  |           |          | 
- lock_time       | integer                  |           |          | 
- block_height    | integer                  |           |          | 
- minted_at       | timestamp with time zone |           |          | 
- minted_by       | character varying(256)   |           |          | 
- feerate         | double precision         |           |          | 
- tx_hash         | character varying(256)   |           |          | 
- tx_fee          | double precision         |           |          | 
- tx_virtual_size | integer                  |           |          | 
- tx_input_count  | integer                  |           |          | 
- tx_input        | jsonb                    |           |          | 
- tx_output_count | integer                  |           |          | 
- tx_output       | jsonb                    |           |          | 
- block_hash      | character varying(256)   |           |          | ''::character varying
- category        | character varying(50)    |           |          | ''::character varying
-Indexes:
-    "cats_pkey" PRIMARY KEY, btree (id)
-    
+Table "public.cats"
+     Column      |           Type           | Description
+ id              | uuid                     | not null, default gen_random_uuid()
+ cat_number      | integer                  | cat number from 0, primary identifier of each cat
+ block_height    | integer                  | the number of the Bitcoin block in which this cat was minted
+ minted_at       | timestamp with time zone | time when this cat was minted on-chain
+ minted_by       | character varying(256)   | taproot address that minted this cat
+ feerate         | double precision         | fee rate paid to mint this cat, in vB/Sat
+ tx_hash         | character varying(256)   | transaction hash for the minting transaction
+ category        | character varying(50)    | category saying how early the mint is, like "sub1k", "sub10k", "sub100k"
+ genesis         | boolean                  | whether this cat is a very special Genesis cat or not
+ cat_colors      | text[]                   | colors in hex format for eye and fur color
+ background_colors | text[]                 | colors in hex format for the background
+ male            | boolean                  | whether this cat is male or not
+ female          | boolean                  | whether this cat is female or not
+ design_index    | integer                  | index of the Mooncat design used to create this cat, from 1 to 128
+ design_pose     | character varying(50)    | pose of the Mooncat design used to create this cat, like "Standing", "Pouncing" etc.
+ design_expression | character varying(50)  | expression of the Mooncat design used to create this cat, like "Smile", "Grumpty" etc.
+ design_pattern  | character varying(50)    | pattern of the Mooncat design used to create this cat, like "Solid", "Eyepatch" etc.
+ design_facing   | character varying(10)    | facing direction of the Mooncat design used to create this cat, like "Left" or "Right"
+ laser_eyes      | character varying(50)    | whether the cat has laser eyes and if so what color they are
+ background      | character varying(50)    | name of background design, like "Whitepaper", "Orange" etc.
+ crown           | character varying(50)    | type of crown the cat is wearing, usually "None" but can be "Gold" or "Diamond"
+ glasses         | character varying(50)    | type of glasses the cat is wearing, usually "None" but can be "3D", "Black" etc.
+ glasses_colors  | text[]                   | colors in hex format for the glasses, if present
+
     Args:
         query (str): The SQL query to execute. Only SELECT queries are supported.
     """
