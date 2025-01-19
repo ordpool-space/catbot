@@ -187,10 +187,10 @@ async def on_command_error(ctx, error):
     help="""Ask me anything! I'm a bot and a cat and a catbot.
     I'll answer what you want to know about your minted cats, the CAT-21 project and more!""",
 )
-async def c(ctx, *args):
+async def c(ctx, *, args):
     requester_info = f"'{ctx.author.name}' ({ctx.author.id})"
     guild_info = f"'{ctx.guild.name}' ({ctx.guild.id})" if ctx.guild else "DM"
-    question = " ".join(args)
+    question = args
     logger.info(f'Got "!c {question}" from {requester_info} in {guild_info}')
 
     if not question.strip():
