@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from logging.handlers import TimedRotatingFileHandler
 from pydantic_ai import Agent
 from pydantic_ai.models.gemini import GeminiModel
+from pydantic_ai.messages import TextPart
 
 # Create a logger
 logger = logging.getLogger()
@@ -190,8 +191,10 @@ async def c(ctx, *, args):
     res = await agent.run(question)
     for msg in res.all_messages():
         logger.info(msg)
+        for part in msg.parts:
+            if type(part) == TextPart:
+                await ctx.send(part.content.strip())
     logger.info(f"Tokens spent: {res.usage()}")
-    await ctx.send(res.data)
 
 
 @agent.tool_plain
