@@ -11,7 +11,7 @@ COPY Pipfile* ./
 RUN pip install pipenv && pipenv install --deploy --ignore-pipfile
 
 # Copy application code to the container
-COPY main.py .
+COPY discordbot.py agent.py ./
 
 # Command to run your bot
-CMD ["pipenv", "run", "python", "main.py"]
+CMD ["pipenv", "run", "python", "discordbot.py"]
