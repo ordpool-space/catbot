@@ -59,6 +59,9 @@ bot = commands.Bot(
     help_command=help_cmd,
 )
 
+# In-memory storage of past messages for each user
+history = dict()
+
 # Block all DMs
 @bot.check
 async def globally_block_dms(ctx):
@@ -91,13 +94,21 @@ async def c(ctx, *, args):
         await ctx.send("I'm a bot and a cat and a catbot. Ask me anything!")
         return
 
-    res = await agent.run(question)
-    for msg in res.all_messages():
+    if requester_info in history:
+        res = await agent.run(
+            question,
+            message_history=history[requester_info].all_messages()
+        )
+    else:
+        res = await agent.run(question)
+
+    for msg in res.new_messages():
         logger.info(msg)
         for part in msg.parts:
             if type(part) == TextPart:
                 await ctx.send(part.content.strip())
     logger.info(f"Tokens spent: {res.usage()}")
+    history[requester_info] = res
 
 
 if __name__ == "__main__":
