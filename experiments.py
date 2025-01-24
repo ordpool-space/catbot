@@ -1,5 +1,7 @@
 import argparse
 
+from pydantic_ai.messages import TextPart, ToolCallPart
+
 from agent import agent
 
 if __name__ == "__main__":
@@ -9,7 +11,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     res = agent.run_sync(args.question)
-    print(res.data)
+    for msg in res.all_messages():
+        for part in msg.parts:
+            if type(part) == TextPart:
+                print(part.content)
+            elif type(part) == ToolCallPart:
+                print(f"Call {part.tool_name}: {part.args.args_dict}")
+                print()
+
     print('-' * 80)
     for msg in res.all_messages():
         print(msg)
