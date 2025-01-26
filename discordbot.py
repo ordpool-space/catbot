@@ -5,9 +5,8 @@ import logging
 from discord.ext import commands
 from dotenv import load_dotenv
 from logging.handlers import TimedRotatingFileHandler
-from pydantic_ai.messages import TextPart
 
-from agent import agent
+from agent import process_question
 
 # Create a logger
 logger = logging.getLogger()
@@ -59,9 +58,6 @@ bot = commands.Bot(
     help_command=help_cmd,
 )
 
-# In-memory storage of past messages for each user
-history = dict()
-
 # Block all DMs
 @bot.check
 async def globally_block_dms(ctx):
@@ -84,31 +80,17 @@ async def on_command_error(ctx, error):
     help="""Ask me anything! I'm a bot and a cat and a catbot.
     I'll answer what you want to know about your minted cats, the CAT-21 project and more!""",
 )
-async def c(ctx, *, args):
+async def c(ctx, *, question):
     requester_info = f"'{ctx.author.name}' ({ctx.author.id})"
     guild_info = f"'{ctx.guild.name}' ({ctx.guild.id})" if ctx.guild else "DM"
-    question = args
     logger.info(f'Got "!c {question}" from {requester_info} in {guild_info}')
 
     if not question.strip():
         await ctx.send("I'm a bot and a cat and a catbot. Ask me anything!")
         return
 
-    if requester_info in history:
-        res = await agent.run(
-            question,
-            message_history=history[requester_info].all_messages()
-        )
-    else:
-        res = await agent.run(question)
-
-    for msg in res.new_messages():
-        logger.info(msg)
-        for part in msg.parts:
-            if type(part) == TextPart:
-                await ctx.send(part.content.strip())
-    logger.info(f"Tokens spent: {res.usage()}")
-    history[requester_info] = res
+    async for answer in process_question(question, requester_info):
+        await ctx.send(answer)
 
 
 if __name__ == "__main__":

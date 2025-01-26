@@ -3,6 +3,7 @@ import sys
 import logging
 import aiohttp
 import psycopg2
+from collections import defaultdict
 from datetime import datetime
 from dotenv import load_dotenv
 from pydantic_ai import Agent
@@ -57,6 +58,9 @@ agent = Agent(
     model=gemini_model,
     system_prompt=SYSTEM_PROMPT,
 )
+
+# In-memory storage of past messages for each user
+history = defaultdict(list)
 
 def get_database_connection():
     """Create a connection to the PostgreSQL database."""
@@ -157,3 +161,25 @@ Table "public.cats"
         return f"Query failed due to {e}"
     finally:
         conn.close()
+
+async def process_question(question: str, asked_by: str):
+    """
+    Process a new question and yield answers as text. Updates the message history to keep track of chat conversation per user.
+    """
+    try:
+        res = await agent.run(
+            question,
+            message_history=history[asked_by]
+        )
+    except Exception as e:
+        logger.exception(f"Failed to process question '{question}' for user '{asked_by}'")
+        yield f"Failed to process question due to {e}"
+        return
+
+    for msg in res.new_messages():
+        logger.info(msg)
+        for part in msg.parts:
+            if type(part) == TextPart:
+                yield part.content.strip()
+    logger.info(f"Tokens spent: {res.usage()}")
+    history[asked_by] = res.all_messages()
