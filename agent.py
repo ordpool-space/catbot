@@ -1,10 +1,9 @@
 import os
-import sys
 import logging
 import aiohttp
 import psycopg2
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from pydantic_ai import Agent
 from pydantic_ai.models.gemini import GeminiModel
@@ -166,14 +165,32 @@ async def process_question(question: str, asked_by: str):
     """
     Process a new question and yield answers as text. Updates the message history to keep track of chat conversation per user.
     """
+    # Keep only the most recent chat history per user.
+    session_duration_minutes = 30
+    # Calculate a cutoff as a list index and use everything after the cutoff.
+    # The cutoff is the first message with a timestamp more recent than the session duration.
+    cutoff = next(
+        (
+            i
+            for i, msg in enumerate(history[asked_by])
+            if any([
+                datetime.now(tz=timezone.utc) - part.timestamp > timedelta(minutes=session_duration_minutes)
+                for part in msg.parts
+                if hasattr(part, "timestamp")
+            ])
+        ),
+        0,
+    )
+    message_history = history[asked_by][cutoff:]
+    logger.info(f"Message history: {message_history}")
     try:
         res = await agent.run(
             question,
-            message_history=history[asked_by]
+            message_history=message_history,
         )
     except Exception as e:
         logger.exception(f"Failed to process question '{question}' for user '{asked_by}'")
-        yield f"Failed to process question due to {e}"
+        yield f"Uh-oh, our stupid dog ate the answer. Please try again."
         return
 
     for msg in res.new_messages():
