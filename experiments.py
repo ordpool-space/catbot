@@ -1,26 +1,20 @@
 import argparse
+import asyncio
+import logging
 
-from pydantic_ai.messages import TextPart, ToolCallPart
+from agent import process_question
 
-from agent import agent
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+async def main(question: str):
+    async for answer in process_question(question, "cli_user"):
+        print('-' * 80)
+        print(answer)
+        print('-' * 80)
 
 if __name__ == "__main__":
-    # use argparse to get question from command line
     parser = argparse.ArgumentParser(description="Ask Catbot a question.")
-    parser.add_argument("-q", "--question", required=True, type=str, help="The question you want to ask the catbot")
+    parser.add_argument("-q", "--question", required=True, type=str, help="The question you want to ask")
     args = parser.parse_args()
 
-    res = agent.run_sync(args.question)
-    for msg in res.all_messages():
-        for part in msg.parts:
-            if type(part) == TextPart:
-                print(part.content)
-            elif type(part) == ToolCallPart:
-                print(f"Call {part.tool_name}: {part.args.args_dict}")
-                print()
-
-    print('-' * 80)
-    for msg in res.all_messages():
-        print(msg)
-        print()
-    print(f"Tokens spent: {res.usage()}")
+    asyncio.run(main(args.question))
