@@ -191,7 +191,7 @@ async def process_question(question: str, asked_by: str):
     except Exception as e:
         logger.exception(f"Failed to process question '{question}' for user '{asked_by}'")
         yield f"Uh-oh, our stupid dog ate the answer. Please try again."
-        return
+        raise
 
     for msg in res.new_messages():
         logger.info(msg)

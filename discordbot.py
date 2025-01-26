@@ -42,6 +42,7 @@ if DISCORD_BOT_TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN environment variable not set")
 
 BACKEND_UNREACHABLE_MSG = "Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
+PROCESSING_ERROR_MSG = "Uh-oh, our stupid dog ate the answer. Please try again."
 
 # Remove "Arguments:" from help command output
 help_cmd = commands.DefaultHelpCommand(show_parameter_descriptions=False)
@@ -89,9 +90,12 @@ async def c(ctx, *, question):
         await ctx.send("I'm a bot and a cat and a catbot. Ask me anything!")
         return
 
-    async for answer in process_question(question, requester_info):
-        await ctx.send(answer)
-
+    try:
+        async for answer in process_question(question, requester_info):
+            await ctx.send(answer)
+    except Exception as e:
+        logger.exception(f"Error processing question '{question}'")
+        await ctx.send(PROCESSING_ERROR_MSG)
 
 if __name__ == "__main__":
     # Run the bot

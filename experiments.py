@@ -17,4 +17,7 @@ if __name__ == "__main__":
     parser.add_argument("-q", "--question", required=True, type=str, help="The question you want to ask")
     args = parser.parse_args()
 
-    asyncio.run(main(args.question))
+    try:
+        asyncio.run(main(args.question))
+    except Exception as e:
+        logging.exception("An error occurred while processing the question.")
