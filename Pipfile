@@ -12,6 +12,7 @@ prometheus-client = "*"
 pydantic-ai = "*"
 aiofiles = "*"
 psycopg2-binary = "*"
+tweepy = "*"
 
 [dev-packages]
 ipykernel = "*"
