@@ -3,6 +3,7 @@ import logging
 import tweepy
 import os
 from typing import Optional
+from dotenv import load_dotenv
 
 from agent import process_question
 
@@ -13,22 +14,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+load_dotenv()
+
 class TwitterBot:
     def __init__(self):
         logger.info("Initializing Twitter bot...")
         self.client = tweepy.Client(
-            bearer_token=os.environ.get("TWITTER_BEARER_TOKEN"),
-            consumer_key=os.environ.get("TWITTER_API_KEY"),
-            consumer_secret=os.environ.get("TWITTER_API_SECRET"), 
-            access_token=os.environ.get("TWITTER_ACCESS_TOKEN"),
-            access_token_secret=os.environ.get("TWITTER_ACCESS_TOKEN_SECRET")
+            bearer_token=os.getenv("TWITTER_BEARER_TOKEN"),
+            consumer_key=os.getenv("TWITTER_API_KEY"),
+            consumer_secret=os.getenv("TWITTER_API_SECRET"), 
+            access_token=os.getenv("TWITTER_ACCESS_TOKEN"),
+            access_token_secret=os.getenv("TWITTER_ACCESS_TOKEN_SECRET"),
+            wait_on_rate_limit=True,
         )
-        
+
         # Get bot's user ID
         self.bot_id = self.client.get_me().data.id
         self.bot_username = self.client.get_me().data.username
         logger.info(f"Bot initialized with ID: {self.bot_id} (@{self.bot_username})")
-        self.last_mention_id: Optional[int] = None
+        self.last_mention_id: Optional[int] = 232417914878304257
 
     async def process_and_reply(self, tweet_id: int, user_id: str, question: str):
         logger.info(f"Processing question from user {user_id} (tweet {tweet_id}): {question}")
@@ -181,8 +185,8 @@ async def run_bot():
         except Exception as e:
             logger.error(f"Error in main loop: {str(e)}")
 
-        logger.info("Sleeping for 15 minutes...")
-        await asyncio.sleep(15 * 60)
+        logger.info("Sleeping for 1 minute...")
+        await asyncio.sleep(1 * 60)
 
 if __name__ == "__main__":
     try:
