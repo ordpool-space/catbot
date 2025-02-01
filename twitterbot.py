@@ -279,8 +279,16 @@ class TwitterBot:
 
 async def run_bot():
     logger.info("Starting Twitter bot...")
-    bot = TwitterBot()
+    bot = None
+
     while True:
+        if not bot:
+            try:
+                bot = TwitterBot()
+            except Exception as e:
+                logger.exception("Initialization failed, retrying in 10 seconds")
+                await asyncio.sleep(10)  # Wait before retry
+
         try:
             await bot.check_mentions()
             # Deal with complexity of follow-up questions later
