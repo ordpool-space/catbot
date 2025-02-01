@@ -21,7 +21,7 @@ os.makedirs("/data/twitter/", exist_ok=True)
 
 # Create a logger
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 # Create handlers
 console_handler = logging.StreamHandler(sys.stdout)
