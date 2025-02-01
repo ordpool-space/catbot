@@ -288,6 +288,10 @@ async def run_bot():
         await asyncio.sleep(1 * 60)
 
 if __name__ == "__main__":
+    # Create folders if needed
+    os.makedirs("/data/logs/", exist_ok=True)
+    os.makedirs("/data/twitter/", exist_ok=True)
+    
     try:
         asyncio.run(run_bot())
     except KeyboardInterrupt:
