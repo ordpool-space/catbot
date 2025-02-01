@@ -2,22 +2,40 @@ import asyncio
 import logging
 import os
 import re
+import sys
+import tempfile
 import aiohttp
 import requests
 import tweepy
 
 from dotenv import load_dotenv
 from io import BytesIO
+from logging.handlers import TimedRotatingFileHandler
 from typing import Optional
 
 from agent import process_question
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+# Create a logger
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
+# Create handlers
+console_handler = logging.StreamHandler(sys.stdout)
+file_handler = TimedRotatingFileHandler(
+    "/data/logs/twitterbot.log", when="midnight", interval=1
 )
-logger = logging.getLogger(__name__)
+file_handler.suffix = "%Y-%m-%d"
+
+# Create a logging format
+formatter = logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
+)
+console_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
+
+# Add the handlers to the logger
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
 
 load_dotenv()
 
@@ -77,44 +95,55 @@ class TwitterBot:
 
     async def process_and_reply(self, tweet_id: int, user_id: str, question: str):
         logger.info(f"Processing question from user {user_id} (tweet {tweet_id}): {question}")
-        try:
-            reply_parts = []
-            async for response in process_question(question, f"twitter_user_{user_id}"):
-                reply_parts.append(response)
 
-            # Combine parts and split into tweets
-            full_reply = "\n".join(reply_parts)
-            tweet_parts = self._split_into_tweets(full_reply)
-            logger.info(f"Split response into {len(tweet_parts)} tweets")
+        reply_parts = []
+        async for response in process_question(question, f"twitter_user_{user_id}"):
+            reply_parts.append(response)
 
-            # Send reply as a thread
-            previous_tweet_id = tweet_id
-            for i, part in enumerate(tweet_parts, 1):
-                logger.info(f"Sending reply part {i}/{len(tweet_parts)}")
-                
-                # Detect image URLs and upload them
-                media_ids = []
-                image_urls = re.findall(r'https://preview\.cat21\.space/pngs/[0-9]+/cat_[0-9]+\.png', part)
-                for image_url in image_urls:
-                    # Download the image
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(image_url) as resp:
-                            image_data = await resp.read()
+        # Combine parts and split into tweets
+        full_reply = "\n".join(reply_parts)
+        tweet_parts = self._split_into_tweets(full_reply)
+        logger.info(f"Split response into {len(tweet_parts)} tweets")
 
-                    # Upload the image to Twitter
-                    media = self.client.media_upload(image_data)
-                    media_ids.append(media.media_id)
-                
-                response = self.client.create_tweet(
-                    text=part,
-                    in_reply_to_tweet_id=previous_tweet_id,
-                    media_ids=media_ids,
-                )
-                previous_tweet_id = response.data['id']
-                logger.info(f"Posted tweet {response.data['id']}")
+        # Send reply as a thread
+        previous_tweet_id = tweet_id
+        for i, part in enumerate(tweet_parts, 1):
+            logger.info(f"Sending reply part {i}/{len(tweet_parts)}")
 
-        except Exception as e:
-            logger.exception(f"Error processing tweet {tweet_id}")
+            # Detect image URLs and upload them
+            media_ids = []
+            image_urls = re.findall(r'https://preview\.cat21\.space/pngs/[0-9]+/cat_[0-9]+\.png', part)
+            for image_url in image_urls:
+                image_name = image_url.split("/")[-1]
+                # Download the image and save it to a temporary file
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(image_url) as resp:
+                        image_data = await resp.read()
+
+                # Create a temporary file to save the image
+                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                    temp_file.write(image_data)
+                    temp_file_name = temp_file.name
+                    logging.info(f"Temporarily saved image {image_name} to '{temp_file_name}'")
+
+                try:
+                    # Upload the image using the temporary filename
+                    media_id = self._upload_media(temp_file_name)
+                    media_ids.append(media_id)
+                finally:
+                    # Ensure the temporary file is deleted after use
+                    os.remove(temp_file_name)
+
+                # Strip image_url from tweet
+                part = part.replace(image_url, '')
+
+            response = self.client.create_tweet(
+                text=part,
+                in_reply_to_tweet_id=previous_tweet_id,
+                media_ids=media_ids,
+            )
+            previous_tweet_id = response.data['id']
+            logger.info(f"Posted tweet {response.data['id']}")
 
     def _split_into_tweets(self, text: str, max_length: int = 280) -> list[str]:
         """Split long text into multiple tweet-sized chunks."""
@@ -137,22 +166,13 @@ class TwitterBot:
             
         return parts
 
-    def upload_media(self, image_path_or_url: str) -> Optional[str]:
+    def _upload_media(self, filepath: str) -> Optional[str]:
         """Upload media and return the media ID."""
-        try:
-            # Handle both local files and URLs
-            if image_path_or_url.startswith(('http://', 'https://')):
-                response = requests.get(image_path_or_url)
-                response.raise_for_status()
-                image_data = BytesIO(response.content)
-                media = self.api.media_upload(filename='image', file=image_data)
-            else:
-                media = self.api.media_upload(filename=image_path_or_url)
-            
-            return media.media_id_string
-        except Exception as e:
-            logger.exception(f"Failed to upload media")
-            return None
+        media = self.api.media_upload(
+            filename=filepath,
+        )
+        logging.debug(media)
+        return media.media_id_string
 
     async def check_mentions(self):
         """Check for new mentions and process them."""
@@ -188,8 +208,10 @@ class TwitterBot:
                 try:
                     await self.process_and_reply(mention.id, mention.author_id, question)
                 except Exception as e:
-                    logger.exception(f"Error processing mention {mention.id}")
-                    continue
+                    logger.exception(f"Error processing mention {mention.id}, will retry it")
+                    # We need to break here to make sure we skip future
+                    # mentions and retry from this mention next time
+                    break
 
                 # Only update last_mention_id after successful processing
                 if not self.last_mention_id or mention.id > self.last_mention_id:
@@ -242,7 +264,7 @@ class TwitterBot:
                     await self.process_and_reply(reply.id, reply.author_id, question)
 
         except Exception as e:
-            logger.error(f"Error checking replies: {str(e)}")
+            logger.exception(f"Error checking replies")
 
 async def run_bot():
     logger.info("Starting Twitter bot...")
@@ -253,7 +275,7 @@ async def run_bot():
             # Deal with complexity of follow-up questions later
             #await bot.check_replies()
         except Exception as e:
-            logger.error(f"Error in main loop: {str(e)}")
+            logger.exception(f"Error in main loop")
 
         logger.info("Sleeping for 1 minute...")
         await asyncio.sleep(1 * 60)
