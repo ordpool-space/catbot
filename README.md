@@ -1,8 +1,11 @@
 # Catbot
 
-A Discord bot for all things CAT-21.
+An agentic AI bot for all things CAT-21. Works both in Discord and on Twitter (X).
 
-## Supported commands
+## Discord bot
 
-!cat 0: Show details about cat number 0 (the genesis cat!), works for any minted cat known to the cat-21-backend API
+Set up in the Haus Hoppe discord. Answers to "!c <question>" and you can ask it anything you want to know about your mints, the project, traits and more.
 
+## Twitter bot
+
+Inhabits the https://x.com/cat21space account and will answer any tweet that mentions it.
