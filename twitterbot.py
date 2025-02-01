@@ -17,7 +17,7 @@ from agent import process_question
 
 # Create a logger
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 # Create handlers
 console_handler = logging.StreamHandler(sys.stdout)
@@ -96,54 +96,61 @@ class TwitterBot:
     async def process_and_reply(self, tweet_id: int, user_id: str, question: str):
         logger.info(f"Processing question from user {user_id} (tweet {tweet_id}): {question}")
 
-        reply_parts = []
-        async for response in process_question(question, f"twitter_user_{user_id}"):
-            reply_parts.append(response)
-
-        # Combine parts and split into tweets
-        full_reply = "\n".join(reply_parts)
-        tweet_parts = self._split_into_tweets(full_reply)
-        logger.info(f"Split response into {len(tweet_parts)} tweets")
-
-        # Send reply as a thread
         previous_tweet_id = tweet_id
-        for i, part in enumerate(tweet_parts, 1):
-            logger.info(f"Sending reply part {i}/{len(tweet_parts)}")
+        part_number = 1
+        async for response in process_question(question, f"twitter_user_{user_id}"):
+            logger.info(f"Processing reply part {part_number}")
 
-            # Detect image URLs and upload them
-            media_ids = []
-            image_urls = re.findall(r'https://preview\.cat21\.space/pngs/[0-9]+/cat_[0-9]+\.png', part)
-            for image_url in image_urls:
-                image_name = image_url.split("/")[-1]
-                # Download the image and save it to a temporary file
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(image_url) as resp:
-                        image_data = await resp.read()
+            # Split response part into tweet-sized chunks
+            tweet_parts = self._split_into_tweets(response)
 
-                # Create a temporary file to save the image
-                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                    temp_file.write(image_data)
-                    temp_file_name = temp_file.name
-                    logging.info(f"Temporarily saved image {image_name} to '{temp_file_name}'")
+            # Send each chunk as part of the reply thread
+            for i, part in enumerate(tweet_parts, 1):
+                logger.info(f"Sending tweet part {i}/{len(tweet_parts)} of reply part {part_number}")
 
-                try:
-                    # Upload the image using the temporary filename
-                    media_id = self._upload_media(temp_file_name)
-                    media_ids.append(media_id)
-                finally:
-                    # Ensure the temporary file is deleted after use
-                    os.remove(temp_file_name)
+                # Detect image URLs and upload them
+                media_ids = []
+                image_urls = re.findall(r'https://preview\.cat21\.space/pngs/[0-9]+/cat_[0-9]+\.png', part)
+                for image_url in image_urls:
+                    image_name = image_url.split("/")[-1]
+                    # Download the image and save it to a temporary file
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(image_url) as resp:
+                            image_data = await resp.read()
 
-                # Strip image_url from tweet
-                part = part.replace(image_url, '')
+                    # Create a temporary file to save the image
+                    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                        temp_file.write(image_data)
+                        temp_file_name = temp_file.name
+                        logging.info(f"Temporarily saved image {image_name} to '{temp_file_name}'")
 
-            response = self.client.create_tweet(
-                text=part,
-                in_reply_to_tweet_id=previous_tweet_id,
-                media_ids=media_ids,
-            )
-            previous_tweet_id = response.data['id']
-            logger.info(f"Posted tweet {response.data['id']}")
+                    try:
+                        # Upload the image using the temporary filename
+                        media_id = self._upload_media(temp_file_name)
+                        media_ids.append(media_id)
+                    finally:
+                        # Ensure the temporary file is deleted after use
+                        os.remove(temp_file_name)
+
+                    # Strip image_url from tweet
+                    part = part.replace(image_url, '')
+
+                if media_ids:
+                    response = self.client.create_tweet(
+                        text=part,
+                        in_reply_to_tweet_id=previous_tweet_id,
+                        media_ids=media_ids,
+                    )
+                else:
+                    response = self.client.create_tweet(
+                        text=part,
+                        in_reply_to_tweet_id=previous_tweet_id,
+                    )
+
+                previous_tweet_id = response.data['id']
+                logger.info(f"Posted tweet {response.data['id']}")
+                part_number += 1
+
 
     def _split_into_tweets(self, text: str, max_length: int = 280) -> list[str]:
         """Split long text into multiple tweet-sized chunks."""
