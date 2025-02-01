@@ -15,6 +15,10 @@ from typing import Optional
 
 from agent import process_question
 
+# Create folders if needed
+os.makedirs("/data/logs/", exist_ok=True)
+os.makedirs("/data/twitter/", exist_ok=True)
+
 # Create a logger
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -287,11 +291,7 @@ async def run_bot():
         logger.info("Sleeping for 1 minute...")
         await asyncio.sleep(1 * 60)
 
-if __name__ == "__main__":
-    # Create folders if needed
-    os.makedirs("/data/logs/", exist_ok=True)
-    os.makedirs("/data/twitter/", exist_ok=True)
-    
+if __name__ == "__main__":   
     try:
         asyncio.run(run_bot())
     except KeyboardInterrupt:
