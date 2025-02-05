@@ -305,5 +305,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Bot shutdown requested by user")
     except Exception as e:
-        logger.error(f"Fatal error: {str(e)}")
+        logger.exception(f"Fatal error, aborting.")
         raise
