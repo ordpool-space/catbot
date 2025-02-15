@@ -2,12 +2,13 @@ import argparse
 import asyncio
 import logging
 
-from agent import process_question
+from agent import get_agent, process_question
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 async def main(question: str):
-    async for answer in process_question(question, "cli_user"):
+    agent = get_agent()
+    async for answer in process_question(agent, question, "cli_user"):
         print('-' * 80)
         print(answer)
         print('-' * 80)

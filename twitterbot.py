@@ -13,7 +13,7 @@ from io import BytesIO
 from logging.handlers import TimedRotatingFileHandler
 from typing import Optional
 
-from agent import process_question
+from agent import get_agent, process_question
 
 # Create folders if needed
 os.makedirs("/data/logs/", exist_ok=True)
@@ -97,12 +97,12 @@ class TwitterBot:
         except Exception as e:
             logger.exception(f"Error saving last mention ID to disk")
 
-    async def process_and_reply(self, tweet_id: int, user_id: str, question: str):
+    async def process_and_reply(self, agent, tweet_id: int, user_id: str, question: str):
         logger.info(f"Processing question from user {user_id} (tweet {tweet_id}): {question}")
 
         previous_tweet_id = tweet_id
         part_number = 1
-        async for response in process_question(question, f"twitter_user_{user_id}"):
+        async for response in process_question(agent, question, f"twitter_user_{user_id}"):
             logger.info(f"Processing reply part {part_number}")
 
             # Split response part into tweet-sized chunks
@@ -185,7 +185,7 @@ class TwitterBot:
         logging.debug(media)
         return media.media_id_string
 
-    async def check_mentions(self):
+    async def check_mentions(self, agent):
         """Check for new mentions and process them."""
         logger.info("Checking for new mentions...")
         try:
@@ -217,7 +217,7 @@ class TwitterBot:
                 logger.info(f"Processing mention {mention.id} from user {mention.author_id}")
 
                 try:
-                    await self.process_and_reply(mention.id, mention.author_id, question)
+                    await self.process_and_reply(agent, mention.id, mention.author_id, question)
                 except Exception as e:
                     logger.exception(f"Error processing mention {mention.id}, will retry it")
                     # We need to break here to make sure we skip future
@@ -280,6 +280,7 @@ class TwitterBot:
 async def run_bot():
     logger.info("Starting Twitter bot...")
     bot = None
+    agent = get_agent()
 
     while True:
         if not bot:
@@ -290,7 +291,7 @@ async def run_bot():
                 await asyncio.sleep(10)  # Wait before retry
 
         try:
-            await bot.check_mentions()
+            await bot.check_mentions(agent)
             # Deal with complexity of follow-up questions later
             #await bot.check_replies()
         except Exception as e:

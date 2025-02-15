@@ -48,15 +48,17 @@ Image URL for a cat number is https://preview.cat21.space/pngs/<CAT_NUMBER_BUCKE
 Do not wait for the user to request images. They always want images. Always post image URLs as regular URLs without any Markdown formatting.
 """
 
-gemini_model = GeminiModel(
-    "gemini-1.5-flash",
-)
-
 # Initialize the AI agent that answers questions
-agent = Agent(
-    model=gemini_model,
-    system_prompt=SYSTEM_PROMPT,
-)
+def get_agent():
+    return Agent(
+        model=GeminiModel("gemini-1.5-flash"),
+        system_prompt=SYSTEM_PROMPT,
+        tools=[
+            query_database,
+            get_today_date,
+            get_cat_age,
+        ],
+    )
 
 # In-memory storage of past messages for each user
 history = defaultdict(list)
@@ -83,12 +85,10 @@ async def get_status() -> dict:
             res.raise_for_status()
             return await res.json()
 
-@agent.tool_plain
 def get_today_date() -> str:
     today = datetime.now().strftime("%Y-%m-%d")
     return f"Today's date is {today}."
 
-@agent.tool_plain
 def get_cat_age(minted_at: str) -> str:
     """Transform a minted_at timestamp into a human-readable age string, like '1 year, 2 months and 3 days old'.
     
@@ -115,7 +115,6 @@ def get_cat_age(minted_at: str) -> str:
 
     return f"{age_str} (born {minted_at_date})"
 
-@agent.tool_plain
 def query_database(query: str) -> list:
     """Execute a SQL query against the "cats" table in the CAT-21 database to figure out anything about CAT-21 mints. Schema for the cats table:
 Table "public.cats"
@@ -161,7 +160,7 @@ Table "public.cats"
     finally:
         conn.close()
 
-async def process_question(question: str, asked_by: str):
+async def process_question(agent, question: str, asked_by: str):
     """
     Process a new question and yield answers as text. Updates the message history to keep track of chat conversation per user.
     """
