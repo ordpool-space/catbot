@@ -21,7 +21,7 @@ os.makedirs("/data/twitter/", exist_ok=True)
 
 # Create a logger
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 # Create handlers
 console_handler = logging.StreamHandler(sys.stdout)
@@ -297,8 +297,8 @@ async def run_bot():
         except Exception as e:
             logger.exception(f"Error in main loop")
 
-        logger.info("Sleeping for 1 minute...")
-        await asyncio.sleep(1 * 60)
+        logger.info("Sleeping for 15 minutes...")
+        await asyncio.sleep(15 * 60)
 
 if __name__ == "__main__":   
     try:
