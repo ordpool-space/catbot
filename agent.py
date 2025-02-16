@@ -34,7 +34,6 @@ class CatbotAgent:
     def __init__(self, additional_instructions: str = ""):
         # Load environment variables
         load_dotenv()
-        self.cat21_api_url = os.getenv("CAT21_API_URL")
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         self.database_host = os.getenv("DATABASE_HOST")
         self.database_name = os.getenv("DATABASE_NAME")
@@ -62,10 +61,16 @@ class CatbotAgent:
 
     def _validate_env_vars(self):
         """Validate required environment variables are set"""
-        if self.cat21_api_url is None:
-            raise ValueError("CAT21_API_URL environment variable not set")
         if self.gemini_api_key is None:
             raise ValueError("GEMINI_API_KEY environment variable not set")
+        if self.database_host is None:
+            raise ValueError("DATABASE_HOST environment variable not set")
+        if self.database_name is None:
+            raise ValueError("DATABASE_NAME environment variable not set")
+        if self.database_user is None:
+            raise ValueError("DATABASE_CATBOT_USER environment variable not set")
+        if self.database_password is None:
+            raise ValueError("DATABASE_CATBOT_PASSWORD environment variable not set")
 
     def _get_database_connection(self):
         """Create a connection to the PostgreSQL database."""
@@ -81,13 +86,6 @@ class CatbotAgent:
         except psycopg2.DatabaseError as e:
             logger.exception("Failed to connect to the database.")
             raise e
-
-    async def _get_status(self) -> dict:
-        """Check status for CAT21 backend API."""
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{self.cat21_api_url}/api/status") as res:
-                res.raise_for_status()
-                return await res.json()
 
     def get_today_date(self) -> str:
         today = datetime.now().strftime("%Y-%m-%d")
@@ -169,14 +167,6 @@ class CatbotAgent:
         """
         Process a new question and yield answers as text. Updates the message history to keep track of chat conversation per user.
         """
-        # Verify that we can reach our backend
-        try:
-            await self._get_status()
-        except Exception as e:
-            logger.exception("Failed to reach backend")
-            yield self.BACKEND_UNREACHABLE_MSG
-            return
-
         # Keep only the most recent chat history per user.
         session_duration_minutes = 30
         # Calculate a cutoff as a list index and use everything after the cutoff.
