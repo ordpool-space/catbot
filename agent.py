@@ -31,11 +31,10 @@ class CatbotAgent:
 
     BACKEND_UNREACHABLE_MSG = "Uh-oh, I'm not able to reach my back-end. Maybe I'll chase someone else's back-end in the meantime."
 
-    def __init__(self):
+    def __init__(self, additional_instructions: str = ""):
         # Load environment variables
         load_dotenv()
         self.cat21_api_url = os.getenv("CAT21_API_URL")
-        self.cat21_image_base_url = os.getenv("CAT21_IMAGE_BASE_URL") 
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         self.database_host = os.getenv("DATABASE_HOST")
         self.database_name = os.getenv("DATABASE_NAME")
@@ -46,8 +45,11 @@ class CatbotAgent:
         
         # Initialize agent
         self.agent = Agent(
-            model=GeminiModel("gemini-1.5-flash"),
-            system_prompt=self.SYSTEM_PROMPT,
+            model=GeminiModel(
+                "gemini-1.5-flash",
+                api_key=self.gemini_api_key
+            ),
+            system_prompt="\n".join([self.SYSTEM_PROMPT, additional_instructions]),
             tools=[
                 self.query_database,
                 self.get_today_date,
@@ -62,12 +64,10 @@ class CatbotAgent:
         """Validate required environment variables are set"""
         if self.cat21_api_url is None:
             raise ValueError("CAT21_API_URL environment variable not set")
-        if self.cat21_image_base_url is None:
-            raise ValueError("CAT21_IMAGE_BASE_URL environment variable not set") 
         if self.gemini_api_key is None:
             raise ValueError("GEMINI_API_KEY environment variable not set")
 
-    def get_database_connection(self):
+    def _get_database_connection(self):
         """Create a connection to the PostgreSQL database."""
         try:
             conn = psycopg2.connect(
@@ -82,7 +82,7 @@ class CatbotAgent:
             logger.exception("Failed to connect to the database.")
             raise e
 
-    async def get_status(self) -> dict:
+    async def _get_status(self) -> dict:
         """Check status for CAT21 backend API."""
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{self.cat21_api_url}/api/status") as res:
@@ -151,7 +151,7 @@ class CatbotAgent:
         Args:
             query (str): The SQL query to execute. Only SELECT queries are supported.
         """
-        conn = self.get_database_connection()
+        conn = self._get_database_connection()
         try:
             with conn.cursor() as cursor:
                 cursor.execute(query)
@@ -169,6 +169,14 @@ class CatbotAgent:
         """
         Process a new question and yield answers as text. Updates the message history to keep track of chat conversation per user.
         """
+        # Verify that we can reach our backend
+        try:
+            await self._get_status()
+        except Exception as e:
+            logger.exception("Failed to reach backend")
+            yield self.BACKEND_UNREACHABLE_MSG
+            return
+
         # Keep only the most recent chat history per user.
         session_duration_minutes = 30
         # Calculate a cutoff as a list index and use everything after the cutoff.
