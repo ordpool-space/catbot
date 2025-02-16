@@ -6,7 +6,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from logging.handlers import TimedRotatingFileHandler
 
-from agent import get_agent, process_question
+from agent import CatbotAgent
 
 # Create a logger
 logger = logging.getLogger()
@@ -60,7 +60,7 @@ bot = commands.Bot(
 )
 
 # Initialize the agent outside question scope to avoid reinitialization
-agent = get_agent()
+agent = CatbotAgent()
 
 # Block all DMs
 @bot.check
@@ -94,7 +94,7 @@ async def c(ctx, *, question):
         return
 
     try:
-        async for answer in process_question(agent, question, requester_info):
+        async for answer in agent.process_question(question, requester_info):
             await ctx.send(answer)
     except Exception as e:
         logger.exception(f"Error processing question '{question}'")
