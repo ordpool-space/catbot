@@ -45,7 +45,7 @@ class CatbotAgent:
         # Initialize agent
         self.agent = Agent(
             model=GeminiModel(
-                "gemini-1.5-flash",
+                "gemini-1.5-flash-002",
                 api_key=self.gemini_api_key
             ),
             system_prompt="\n".join([self.SYSTEM_PROMPT, additional_instructions]),
